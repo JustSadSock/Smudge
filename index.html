@@ -53,6 +53,18 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
+    #quickPalette {
+      display: flex;
+      gap: 4px;
+    }
+    .swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      border: 1px solid #00000030;
+      cursor: pointer;
+    }
+
     canvas {
       position: absolute;
       top: 0;
@@ -101,13 +113,28 @@
     <button id="clearBtn">Очистить</button>
     <button id="saveBtn">Сохранить</button>
     <button id="ambientBtn" title="Звук">🎵</button>
+    <div id="quickPalette" title="Быстрые цвета"></div>
+    <select id="layerSelect" title="Слой">
+      <option value="1">Объекты</option>
+      <option value="0">Фон</option>
+    </select>
+    <label><input type="checkbox" id="showLayer0" checked>Фон</label>
+    <label><input type="checkbox" id="showLayer1" checked>Объекты</label>
   </div>
-  <canvas id="canvas"></canvas>
+  <canvas id="layer0"></canvas>
+  <canvas id="layer1"></canvas>
 
   <script>
     const toolbar = document.getElementById('toolbar');
-    const canvas  = document.getElementById('canvas');
-    const ctx     = canvas.getContext('2d');
+    const layers = [
+      document.getElementById('layer0'),
+      document.getElementById('layer1')
+    ];
+    const ctxs = layers.map(l => l.getContext('2d'));
+    let activeLayer = 1;
+    let canvas = layers[activeLayer];
+    let ctx    = ctxs[activeLayer];
+
     const colorPicker  = document.getElementById('colorPicker');
     const opacityPicker= document.getElementById('opacityPicker');
     const sizePicker   = document.getElementById('sizePicker');
@@ -121,12 +148,40 @@
     const clearBtn     = document.getElementById('clearBtn');
     const saveBtn      = document.getElementById('saveBtn');
     const ambientBtn   = document.getElementById('ambientBtn');
+    const quickPalette = document.getElementById('quickPalette');
+    const layerSelect  = document.getElementById('layerSelect');
+    const showLayer0   = document.getElementById('showLayer0');
+    const showLayer1   = document.getElementById('showLayer1');
+
+    const paletteColors = ['#000000','#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff','#00ffff','#ffffff'];
+    quickPalette.innerHTML = paletteColors.map(c => `<div class="swatch" data-color="${c}" style="background:${c}"></div>`).join('');
+    quickPalette.addEventListener('click', e => {
+      if (e.target.classList.contains('swatch')) {
+        colorPicker.value = e.target.dataset.color;
+      }
+    });
+
+    function updateVisibility() {
+      layers[0].style.display = showLayer0.checked ? 'block' : 'none';
+      layers[1].style.display = showLayer1.checked ? 'block' : 'none';
+    }
+    showLayer0.addEventListener('change', updateVisibility);
+    showLayer1.addEventListener('change', updateVisibility);
+    layerSelect.addEventListener('change', () => {
+      activeLayer = parseInt(layerSelect.value, 10);
+      canvas = layers[activeLayer];
+      ctx = ctxs[activeLayer];
+    });
+    updateVisibility();
 
     let currentTool = 'brush';
     const history = [];
     const redoStack = [];
 
     let scale = 1;
+    let rotation = 0;
+    let startAngle = 0;
+    let startRotation = 0;
 
     let drawing = false;
     const pointers = new Map();
@@ -149,10 +204,17 @@
       };
     }
 
+    function autosave() {
+      layers.forEach((l, i) => {
+        try { localStorage.setItem('layer'+i, l.toDataURL()); } catch(e) {}
+      });
+    }
+
     function saveState() {
       history.push(canvas.toDataURL());
       if (history.length > 50) history.shift();
       redoStack.length = 0;
+      autosave();
     }
 
     function restoreState(data) {
@@ -165,12 +227,22 @@
     }
 
     function resizeCanvas() {
-      canvas.width  = window.innerWidth;
-      canvas.height = window.innerHeight - toolbar.offsetHeight;
-      canvas.style.top = '0';
+      layers.forEach(layer => {
+        layer.width  = window.innerWidth;
+        layer.height = window.innerHeight - toolbar.offsetHeight;
+        layer.style.top = '0';
+      });
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
+    layers.forEach((layer, i) => {
+      const data = localStorage.getItem('layer'+i);
+      if (data) {
+        const img = new Image();
+        img.onload = () => ctxs[i].drawImage(img, 0, 0);
+        img.src = data;
+      }
+    });
     saveState();
 
     ctx.lineCap   = 'round';
@@ -178,6 +250,10 @@
 
     function distance(a, b) {
       return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function angle(a, b) {
+      return Math.atan2(b.y - a.y, b.x - a.x);
     }
 
     function startDrawing(e) {
@@ -207,6 +283,8 @@
         const [p1, p2] = Array.from(pointers.values());
         startDistance = distance(p1, p2);
         startScale = scale;
+        startAngle = angle(p1, p2);
+        startRotation = rotation;
         if (drawing) {
           drawing = false;
           ctx.closePath();
@@ -214,6 +292,11 @@
         return;
       }
       if (pointers.size > 1 || pinching) return;
+
+      if (e.currentTarget !== canvas) {
+        pointers.delete(e.pointerId);
+        return;
+      }
 
       if (currentTool === 'eyedropper') {
         const pos = getCanvasCoords(e);
@@ -237,7 +320,9 @@
             const [p1, p2] = Array.from(pointers.values());
             const newDist = distance(p1, p2);
             scale = startScale * newDist / startDistance;
-            updateZoom();
+            const newAngle = angle(p1, p2);
+            rotation = startRotation + newAngle - startAngle;
+            updateTransform();
           }
         }
         return;
@@ -265,11 +350,13 @@
       pointers.delete(e.pointerId);
     }
 
-    canvas.addEventListener('pointerdown', pointerDown);
-    canvas.addEventListener('pointermove', pointerMove);
-    canvas.addEventListener('pointerup',   pointerUp);
-    canvas.addEventListener('pointerout',  pointerUp);
-    canvas.addEventListener('pointercancel', pointerUp);
+    layers.forEach(layer => {
+      layer.addEventListener('pointerdown', pointerDown);
+      layer.addEventListener('pointermove', pointerMove);
+      layer.addEventListener('pointerup',   pointerUp);
+      layer.addEventListener('pointerout',  pointerUp);
+      layer.addEventListener('pointercancel', pointerUp);
+    });
 
     clearBtn.addEventListener('click', () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -302,31 +389,39 @@
       currentTool = currentTool === 'eyedropper' ? 'brush' : 'eyedropper';
     });
 
-    function updateZoom() {
-      canvas.style.transformOrigin = '0 0';
-      canvas.style.transform = `scale(${scale})`;
+    function updateTransform() {
+      layers.forEach(layer => {
+        layer.style.transformOrigin = '0 0';
+        layer.style.transform = `scale(${scale}) rotate(${rotation}rad)`;
+      });
     }
 
     zoomInBtn.addEventListener('click', () => {
       scale *= 1.2;
-      updateZoom();
+      updateTransform();
     });
 
     zoomOutBtn.addEventListener('click', () => {
       scale /= 1.2;
-      updateZoom();
+      updateTransform();
     });
 
-    updateZoom();
+    updateTransform();
 
     saveBtn.addEventListener('click', () => {
+      const off = document.createElement('canvas');
+      off.width = canvas.width;
+      off.height = canvas.height;
+      const offCtx = off.getContext('2d');
+      layers.forEach(l => offCtx.drawImage(l, 0, 0));
+      const url = off.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = 'drawing.png';
-      link.href = canvas.toDataURL('image/png');
+      link.href = url;
       link.click();
 
       const img = document.createElement('img');
-      img.src = link.href;
+      img.src = url;
       img.className = 'snapshot';
       document.body.appendChild(img);
       setTimeout(() => img.remove(), 3000);
