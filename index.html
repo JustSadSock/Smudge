@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Draw App</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #toolbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px;
+      background: #f0f0f0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+    #toolbar input, #toolbar button {
+      font-size: 16px;
+      padding: 4px 8px;
+    }
+    canvas { 
+      position: absolute; top: 100%; /* will be reset by JS */
+      left: 0; 
+      touch-action: none; /* отключаем браузерный зум/скролл при рисовании */
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <input type="color" id="colorPicker" title="Цвет кисти" value="#000000">
+    <label title="Размер кисти">
+      <input type="range" id="sizePicker" min="1" max="50" value="5">
+    </label>
+    <button id="clearBtn">Очистить</button>
+    <button id="saveBtn">Сохранить</button>
+  </div>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const toolbar = document.getElementById('toolbar');
+    const canvas  = document.getElementById('canvas');
+    const ctx     = canvas.getContext('2d');
+    const colorPicker = document.getElementById('colorPicker');
+    const sizePicker  = document.getElementById('sizePicker');
+    const clearBtn    = document.getElementById('clearBtn');
+    const saveBtn     = document.getElementById('saveBtn');
+
+    let drawing = false;
+
+    function resizeCanvas() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight - toolbar.offsetHeight;
+      canvas.style.top = toolbar.offsetHeight + 'px';
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    ctx.lineCap   = 'round';
+    ctx.lineJoin  = 'round';
+
+    function pointerDown(e) {
+      drawing = true;
+      ctx.strokeStyle = colorPicker.value;
+      ctx.lineWidth   = sizePicker.value;
+      ctx.beginPath();
+      ctx.moveTo(e.clientX, e.clientY - toolbar.offsetHeight);
+      canvas.setPointerCapture(e.pointerId);
+    }
+    function pointerMove(e) {
+      if (!drawing) return;
+      ctx.lineTo(e.clientX, e.clientY - toolbar.offsetHeight);
+      ctx.stroke();
+    }
+    function pointerUp(e) {
+      drawing = false;
+      ctx.closePath();
+      canvas.releasePointerCapture(e.pointerId);
+    }
+
+    canvas.addEventListener('pointerdown', pointerDown);
+    canvas.addEventListener('pointermove', pointerMove);
+    canvas.addEventListener('pointerup',   pointerUp);
+    canvas.addEventListener('pointerout',  pointerUp);
+    canvas.addEventListener('pointercancel', pointerUp);
+
+    clearBtn.addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = 'drawing.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+  </script>
+</body>
+</html>
