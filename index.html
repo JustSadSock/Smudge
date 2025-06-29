@@ -134,6 +134,20 @@
       30%  { opacity: 1; }
       to   { transform: translate(-50%,20px); opacity: 0; }
     }
+
+    #gridOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px);
+      background-size: 20px 20px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -160,6 +174,7 @@
     <button id="clearBtn" title="Очистить">🗑️</button>
     <button id="saveBtn" title="Сохранить">💾</button>
     <button id="ambientBtn" title="Звук">🎵</button>
+    <button id="gridBtn" title="Сетка">#</button>
     <div id="quickPalette" title="Быстрые цвета"></div>
     <select id="layerSelect" title="Слой">
       <option value="1">Объекты</option>
@@ -170,12 +185,14 @@
   </div>
   <canvas id="layer0"></canvas>
   <canvas id="layer1"></canvas>
+  <div id="gridOverlay"></div>
 
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
     }
   </script>
+  <script src="src/libs/gif.js"></script>
   <script type="module" src="src/game.js"></script>
 </body>
 
