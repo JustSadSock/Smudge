@@ -315,6 +315,7 @@ saveBtn.addEventListener('click', () => {
 
   const img = document.createElement('img');
   img.src = url;
+  img.alt = 'snapshot';
   img.className = 'snapshot';
   document.body.appendChild(img);
   setTimeout(() => img.remove(), 3000);

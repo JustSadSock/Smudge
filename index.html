@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="manifest" href="manifest.json">
   <script>
     if (screen.orientation && screen.orientation.lock) {
       screen.orientation.lock("portrait").catch(() => {});
@@ -153,6 +154,11 @@
   <canvas id="layer0"></canvas>
   <canvas id="layer1"></canvas>
 
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
   <script type="module" src="src/game.js"></script>
 </body>
 

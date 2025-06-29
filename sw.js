@@ -6,7 +6,8 @@ self.addEventListener('install', event => {
       './src/animator.js',
       './src/utils.js',
       './index.html',
-      './src/game.js'
+      './src/game.js',
+      './src/libs/gif.js'
     ]))
   );
 });
