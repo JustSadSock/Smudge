@@ -30,12 +30,29 @@
       box-shadow: 0 -2px 4px rgba(0,0,0,0.2);
       border-radius: 12px 12px 0 0;
       z-index: 10;
-      transition: opacity 0.5s;
+      transition: transform 0.3s;
     }
 
-    #toolbar.hidden {
-      opacity: 0;
-      pointer-events: none;
+    #toolbar.collapsed > :not(#toggleToolbarBtn) {
+      display: none;
+    }
+    #toolbar.collapsed {
+      padding: 4px;
+      justify-content: flex-end;
+    }
+
+    #toggleToolbarBtn {
+      background: #e3daf5;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.3s;
+    }
+    #toolbar.collapsed #toggleToolbarBtn {
+      transform: rotate(180deg);
     }
 
     #toolbar input,
@@ -103,6 +120,7 @@
 </head>
 <body>
   <div id="toolbar">
+    <button id="toggleToolbarBtn" title="Свернуть панель">▼</button>
     <input type="color" id="colorPicker" title="Цвет кисти" value="#000000">
     <label title="Прозрачность">
       <input type="range" id="opacityPicker" min="0" max="100" value="100">
