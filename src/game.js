@@ -25,6 +25,8 @@ const eyedropperBtn = document.getElementById('eyedropperBtn');
 const clearBtn      = document.getElementById('clearBtn');
 const saveBtn       = document.getElementById('saveBtn');
 const ambientBtn    = document.getElementById('ambientBtn');
+const gridBtn       = document.getElementById('gridBtn');
+const gridOverlay   = document.getElementById('gridOverlay');
 const quickPalette  = document.getElementById('quickPalette');
 const layerSelect   = document.getElementById('layerSelect');
 const showLayer0    = document.getElementById('showLayer0');
@@ -38,6 +40,18 @@ quickPalette.addEventListener('click', e => {
     quickPalette.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
     e.target.classList.add('selected');
   }
+});
+let paletteTimer;
+quickPalette.addEventListener('pointerdown', e => {
+  if (e.target.classList.contains('swatch')) {
+    paletteTimer = setTimeout(() => {
+      e.target.dataset.color = colorPicker.value;
+      e.target.style.background = colorPicker.value;
+    }, 600);
+  }
+});
+['pointerup','pointercancel','pointerout'].forEach(ev => {
+  quickPalette.addEventListener(ev, () => clearTimeout(paletteTimer));
 });
 
 function updateVisibility() {
@@ -72,6 +86,9 @@ const pointers = new Map();
 let pinching = false;
 let startDistance = 0;
 let startScale = 1;
+let swipeGesture = null;
+const timelapseFrames = [];
+let toolbarTimer;
 
 function getCanvasCoords(e) {
   const rect = canvas.getBoundingClientRect();
@@ -87,6 +104,16 @@ function autosave() {
   });
 }
 
+function captureFrame() {
+  const off = document.createElement('canvas');
+  off.width = canvas.width;
+  off.height = canvas.height;
+  const offCtx = off.getContext('2d');
+  layers.forEach(l => offCtx.drawImage(l, 0, 0));
+  timelapseFrames.push(off);
+  if (timelapseFrames.length > 200) timelapseFrames.shift();
+}
+
 function checkStorage() {
   try {
     const size = (localStorage.getItem('layer0')||'').length + (localStorage.getItem('layer1')||'').length;
@@ -98,6 +125,7 @@ function saveState() {
   history.push(canvas.toDataURL());
   if (history.length > 50) history.shift();
   redoStack.length = 0;
+  captureFrame();
   autosave();
 }
 
@@ -116,6 +144,8 @@ function resizeCanvas() {
     layer.height = window.innerHeight - toolbar.offsetHeight;
     layer.style.top = '0';
   });
+  gridOverlay.style.width = layers[0].width + 'px';
+  gridOverlay.style.height = layers[0].height + 'px';
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -160,8 +190,12 @@ function startDrawing(e) {
 }
 
 function pointerDown(e) {
-  pointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+  pointers.set(e.pointerId, {x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY});
   if (pointers.size === 2) {
+    swipeGesture = {
+      ids: Array.from(pointers.keys()),
+      start: Array.from(pointers.values()).map(p => ({x:p.x, y:p.y}))
+    };
     pinching = true;
     const [p1, p2] = Array.from(pointers.values());
     startDistance = distance(p1, p2);
@@ -199,20 +233,23 @@ function pointerDown(e) {
 }
 
 function pointerMove(e) {
+  if (pointers.has(e.pointerId)) {
+    const p = pointers.get(e.pointerId);
+    p.x = e.clientX;
+    p.y = e.clientY;
+    pointers.set(e.pointerId, p);
+  }
   if (pinching) {
-    if (pointers.has(e.pointerId)) {
-      pointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
-      if (pointers.size === 2) {
-        const [p1, p2] = Array.from(pointers.values());
-        const newDist = distance(p1, p2);
-        scale = startScale * newDist / startDistance;
-        const newAngle = angle(p1, p2);
-        rotation = startRotation + newAngle - startAngle;
-        const newCentroid = { x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2 };
-        offsetX = startOffsetX + (newCentroid.x - startCentroid.x);
-        offsetY = startOffsetY + (newCentroid.y - startCentroid.y);
-        updateTransform();
-      }
+    if (pointers.size === 2) {
+      const [p1, p2] = Array.from(pointers.values());
+      const newDist = distance(p1, p2);
+      scale = startScale * newDist / startDistance;
+      const newAngle = angle(p1, p2);
+      rotation = startRotation + newAngle - startAngle;
+      const newCentroid = { x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2 };
+      offsetX = startOffsetX + (newCentroid.x - startCentroid.x);
+      offsetY = startOffsetY + (newCentroid.y - startCentroid.y);
+      updateTransform();
     }
     return;
   }
@@ -230,10 +267,32 @@ function pointerMove(e) {
 }
 
 function pointerUp(e) {
+  if (pointers.has(e.pointerId)) {
+    const p = pointers.get(e.pointerId);
+    p.x = e.clientX;
+    p.y = e.clientY;
+    pointers.set(e.pointerId, p);
+  }
   if (pinching) {
     pointers.delete(e.pointerId);
     if (pointers.size < 2) {
       pinching = false;
+      if (swipeGesture) {
+        const [id1, id2] = swipeGesture.ids;
+        const p1 = pointers.get(id1);
+        const p2 = pointers.get(id2);
+        if (p1 && p2) {
+          const dx1 = p1.x - p1.startX;
+          const dx2 = p2.x - p2.startX;
+          const dy1 = p1.y - p1.startY;
+          const dy2 = p2.y - p2.startY;
+          if (Math.abs(dx1) > 80 && Math.abs(dx2) > 80 && Math.abs(dy1) < 50 && Math.abs(dy2) < 50 && Math.sign(dx1) === Math.sign(dx2)) {
+            if (dx1 < 0) undoBtn.click();
+            else redoBtn.click();
+          }
+        }
+        swipeGesture = null;
+      }
     }
     return;
   }
@@ -330,6 +389,29 @@ saveBtn.addEventListener('click', () => {
   setTimeout(() => img.remove(), 3000);
 });
 
+function saveTimelapse() {
+  if (timelapseFrames.length === 0 || typeof GIF !== 'function') return;
+  const gif = new GIF({workers:2, quality:10});
+  timelapseFrames.forEach(c => gif.addFrame(c, {delay:200}));
+  gif.on('finished', blob => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = 'timelapse.gif';
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+  gif.render();
+}
+
+let saveHold;
+saveBtn.addEventListener('pointerdown', () => {
+  saveHold = setTimeout(saveTimelapse, 600);
+});
+['pointerup','pointercancel','pointerout'].forEach(ev => {
+  saveBtn.addEventListener(ev, () => clearTimeout(saveHold));
+});
+
 let audioCtx, noiseSource;
 function toggleAmbient() {
   if (!audioCtx) {
@@ -354,8 +436,30 @@ function toggleAmbient() {
 
 ambientBtn.addEventListener('click', toggleAmbient);
 
+gridBtn.addEventListener('click', () => {
+  gridOverlay.style.display = gridOverlay.style.display === 'none' ? 'block' : 'none';
+});
+
 const toggleToolbarBtn = document.getElementById('toggleToolbarBtn');
 toggleToolbarBtn.addEventListener('click', () => {
   toolbar.classList.toggle('collapsed');
   toggleToolbarBtn.textContent = toolbar.classList.contains('collapsed') ? '▲' : '▼';
 });
+
+function resetToolbarTimer() {
+  clearTimeout(toolbarTimer);
+  toolbarTimer = setTimeout(() => {
+    toolbar.classList.add('collapsed');
+    toggleToolbarBtn.textContent = '▲';
+  }, 5000);
+}
+
+window.addEventListener('pointerdown', () => {
+  if (toolbar.classList.contains('collapsed')) {
+    toolbar.classList.remove('collapsed');
+    toggleToolbarBtn.textContent = '▼';
+  }
+  resetToolbarTimer();
+});
+window.addEventListener('pointermove', resetToolbarTimer);
+resetToolbarTimer();
