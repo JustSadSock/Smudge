@@ -10,23 +10,71 @@
   </script>
   <title>Draw App</title>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #fefaf6;
+      font-family: sans-serif;
+    }
+
     #toolbar {
-      position: fixed; top: 0; left: 0; right: 0;
-      display: flex; align-items: center; gap: 8px;
-      padding: 6px;
-      background: #f0f0f0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 8px 6px;
+      background: rgba(232,228,223,0.9);
+      box-shadow: 0 -2px 4px rgba(0,0,0,0.2);
+      border-radius: 12px 12px 0 0;
       z-index: 10;
+      transition: opacity 0.5s;
     }
-    #toolbar input, #toolbar button, #toolbar select {
+
+    #toolbar input,
+    #toolbar button,
+    #toolbar select {
       font-size: 16px;
-      padding: 4px 8px;
+      padding: 6px 10px;
+      background: #d5e3dc;
+      border: none;
+      border-radius: 10px;
     }
-    canvas { 
-      position: absolute; top: 100%; /* will be reset by JS */
-      left: 0; 
+
+    #toolbar button {
+      background: #e3daf5;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
       touch-action: none; /* отключаем браузерный зум/скролл при рисовании */
+    }
+
+    .snapshot {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      width: 160px;
+      transform: translateX(-50%);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      animation: polaroid 3s ease-out forwards;
+      border-radius: 4px;
+    }
+
+    @keyframes polaroid {
+      from { transform: translate(-50%,100%); opacity: 0; }
+      30%  { opacity: 1; }
+      to   { transform: translate(-50%,20px); opacity: 0; }
     }
   </style>
 </head>
@@ -52,6 +100,7 @@
     <button id="eyedropperBtn" title="Пипетка">Пипетка</button>
     <button id="clearBtn">Очистить</button>
     <button id="saveBtn">Сохранить</button>
+    <button id="ambientBtn" title="Звук">🎵</button>
   </div>
   <canvas id="canvas"></canvas>
 
@@ -71,6 +120,7 @@
     const eyedropperBtn= document.getElementById('eyedropperBtn');
     const clearBtn     = document.getElementById('clearBtn');
     const saveBtn      = document.getElementById('saveBtn');
+    const ambientBtn   = document.getElementById('ambientBtn');
 
     let currentTool = 'brush';
     const history = [];
@@ -117,7 +167,7 @@
     function resizeCanvas() {
       canvas.width  = window.innerWidth;
       canvas.height = window.innerHeight - toolbar.offsetHeight;
-      canvas.style.top = toolbar.offsetHeight + 'px';
+      canvas.style.top = '0';
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -274,7 +324,37 @@
       link.download = 'drawing.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
+
+      const img = document.createElement('img');
+      img.src = link.href;
+      img.className = 'snapshot';
+      document.body.appendChild(img);
+      setTimeout(() => img.remove(), 3000);
     });
+
+    let audioCtx, noiseSource;
+    function toggleAmbient() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        noiseSource = audioCtx.createBufferSource();
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.05;
+        noiseSource.buffer = buffer;
+        noiseSource.loop = true;
+        noiseSource.connect(gain).connect(audioCtx.destination);
+        noiseSource.start();
+      } else {
+        if (audioCtx.state === 'running') audioCtx.suspend();
+        else audioCtx.resume();
+      }
+    }
+
+    ambientBtn.addEventListener('click', toggleAmbient);
   </script>
 </body>
 </html>
