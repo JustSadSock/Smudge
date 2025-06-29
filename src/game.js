@@ -344,13 +344,8 @@ function toggleAmbient() {
 
 ambientBtn.addEventListener('click', toggleAmbient);
 
-let hideTimer;
-function showToolbar() {
-  toolbar.classList.remove('hidden');
-  clearTimeout(hideTimer);
-  hideTimer = setTimeout(() => toolbar.classList.add('hidden'), 3000);
-}
-
-document.addEventListener('pointerdown', showToolbar);
-document.addEventListener('pointermove', showToolbar);
-showToolbar();
+const toggleToolbarBtn = document.getElementById('toggleToolbarBtn');
+toggleToolbarBtn.addEventListener('click', () => {
+  toolbar.classList.toggle('collapsed');
+  toggleToolbarBtn.textContent = toolbar.classList.contains('collapsed') ? '▲' : '▼';
+});
