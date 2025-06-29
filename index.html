@@ -33,6 +33,11 @@
       transition: opacity 0.5s;
     }
 
+    #toolbar.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
     #toolbar input,
     #toolbar button,
     #toolbar select {
@@ -51,6 +56,11 @@
       align-items: center;
       justify-content: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: opacity 0.3s;
+    }
+
+    #toolbar button:hover {
+      opacity: 0.8;
     }
 
     #quickPalette {
@@ -70,6 +80,7 @@
       top: 0;
       left: 0;
       touch-action: none; /* отключаем браузерный зум/скролл при рисовании */
+      transition: filter 0.1s;
     }
 
     .snapshot {
@@ -108,10 +119,10 @@
     <button id="zoomOutBtn" title="Отдалить">-</button>
     <button id="undoBtn" title="Отменить">&#8617;</button>
     <button id="redoBtn" title="Повторить">&#8618;</button>
-    <button id="fillBtn" title="Заливка">Залить</button>
-    <button id="eyedropperBtn" title="Пипетка">Пипетка</button>
-    <button id="clearBtn">Очистить</button>
-    <button id="saveBtn">Сохранить</button>
+    <button id="fillBtn" title="Заливка">🪣</button>
+    <button id="eyedropperBtn" title="Пипетка">🎨</button>
+    <button id="clearBtn" title="Очистить">🗑️</button>
+    <button id="saveBtn" title="Сохранить">💾</button>
     <button id="ambientBtn" title="Звук">🎵</button>
     <div id="quickPalette" title="Быстрые цвета"></div>
     <select id="layerSelect" title="Слой">
@@ -153,7 +164,7 @@
     const showLayer0   = document.getElementById('showLayer0');
     const showLayer1   = document.getElementById('showLayer1');
 
-    const paletteColors = ['#000000','#ff0000','#00ff00','#0000ff','#ffff00','#ff00ff','#00ffff','#ffffff'];
+    const paletteColors = ['#aed9e0','#f6c6c6','#d5e3dc','#e3daf5','#fefaf6','#e8e4df','#f3f3f3','#ffffff'];
     quickPalette.innerHTML = paletteColors.map(c => `<div class="swatch" data-color="${c}" style="background:${c}"></div>`).join('');
     quickPalette.addEventListener('click', e => {
       if (e.target.classList.contains('swatch')) {
@@ -180,8 +191,13 @@
 
     let scale = 1;
     let rotation = 0;
+    let offsetX = 0;
+    let offsetY = 0;
     let startAngle = 0;
     let startRotation = 0;
+    let startCentroid = {x:0,y:0};
+    let startOffsetX = 0;
+    let startOffsetY = 0;
 
     let drawing = false;
     const pointers = new Map();
@@ -210,6 +226,13 @@
       });
     }
 
+    function checkStorage() {
+      try {
+        const size = (localStorage.getItem('layer0')||'').length + (localStorage.getItem('layer1')||'').length;
+        if (size > 1024 * 1024) localStorage.clear();
+      } catch(e) {}
+    }
+
     function saveState() {
       history.push(canvas.toDataURL());
       if (history.length > 50) history.shift();
@@ -235,6 +258,7 @@
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
+    checkStorage();
     layers.forEach((layer, i) => {
       const data = localStorage.getItem('layer'+i);
       if (data) {
@@ -256,9 +280,13 @@
       return Math.atan2(b.y - a.y, b.x - a.x);
     }
 
+    let lastPoint = null;
+    let lastTime = 0;
+
     function startDrawing(e) {
       drawing = true;
-      ctx.strokeStyle = hexToRGBA(colorPicker.value, opacityPicker.value / 100);
+      ctx.strokeStyle = colorPicker.value;
+      ctx.globalAlpha = opacityPicker.value / 100;
       ctx.lineWidth   = sizePicker.value;
       if (brushShape.value === 'eraser') {
         ctx.globalCompositeOperation = 'destination-out';
@@ -273,6 +301,8 @@
       ctx.beginPath();
       const pos = getCanvasCoords(e);
       ctx.moveTo(pos.x, pos.y);
+      lastPoint = pos;
+      lastTime = performance.now();
       canvas.setPointerCapture(e.pointerId);
     }
 
@@ -285,6 +315,9 @@
         startScale = scale;
         startAngle = angle(p1, p2);
         startRotation = rotation;
+        startCentroid = { x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2 };
+        startOffsetX = offsetX;
+        startOffsetY = offsetY;
         if (drawing) {
           drawing = false;
           ctx.closePath();
@@ -322,6 +355,9 @@
             scale = startScale * newDist / startDistance;
             const newAngle = angle(p1, p2);
             rotation = startRotation + newAngle - startAngle;
+            const newCentroid = { x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2 };
+            offsetX = startOffsetX + (newCentroid.x - startCentroid.x);
+            offsetY = startOffsetY + (newCentroid.y - startCentroid.y);
             updateTransform();
           }
         }
@@ -329,8 +365,15 @@
       }
       if (!drawing) return;
       const pos = getCanvasCoords(e);
-      ctx.lineTo(pos.x, pos.y);
+      const now = performance.now();
+      const dt = now - lastTime || 16;
+      const dist = Math.hypot(pos.x - lastPoint.x, pos.y - lastPoint.y);
+      const speed = dist / dt;
+      canvas.style.filter = speed > 0.8 ? 'blur(1px)' : 'none';
+      ctx.lineTo(pos.x + (Math.random()-0.5), pos.y + (Math.random()-0.5));
       ctx.stroke();
+      lastPoint = pos;
+      lastTime = now;
     }
 
     function pointerUp(e) {
@@ -347,6 +390,7 @@
       ctx.globalCompositeOperation = 'source-over';
       canvas.releasePointerCapture(e.pointerId);
       saveState();
+      canvas.style.filter = 'none';
       pointers.delete(e.pointerId);
     }
 
@@ -392,7 +436,7 @@
     function updateTransform() {
       layers.forEach(layer => {
         layer.style.transformOrigin = '0 0';
-        layer.style.transform = `scale(${scale}) rotate(${rotation}rad)`;
+        layer.style.transform = `translate(${offsetX}px,${offsetY}px) scale(${scale}) rotate(${rotation}rad)`;
       });
     }
 
@@ -450,6 +494,17 @@
     }
 
     ambientBtn.addEventListener('click', toggleAmbient);
+
+    let hideTimer;
+    function showToolbar() {
+      toolbar.classList.remove('hidden');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => toolbar.classList.add('hidden'), 3000);
+    }
+
+    document.addEventListener('pointerdown', showToolbar);
+    document.addEventListener('pointermove', showToolbar);
+    showToolbar();
   </script>
 </body>
 </html>
