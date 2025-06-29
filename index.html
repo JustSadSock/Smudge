@@ -14,7 +14,7 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       z-index: 10;
     }
-    #toolbar input, #toolbar button {
+    #toolbar input, #toolbar button, #toolbar select {
       font-size: 16px;
       padding: 4px 8px;
     }
@@ -28,9 +28,19 @@
 <body>
   <div id="toolbar">
     <input type="color" id="colorPicker" title="Цвет кисти" value="#000000">
+    <label title="Прозрачность">
+      <input type="range" id="opacityPicker" min="0" max="100" value="100">
+    </label>
     <label title="Размер кисти">
       <input type="range" id="sizePicker" min="1" max="50" value="5">
     </label>
+    <select id="brushShape" title="Тип кисти">
+      <option value="round">Круглая</option>
+      <option value="square">Квадратная</option>
+      <option value="eraser">Ластик</option>
+    </select>
+    <button id="zoomInBtn"  title="Приблизить">+</button>
+    <button id="zoomOutBtn" title="Отдалить">-</button>
     <button id="clearBtn">Очистить</button>
     <button id="saveBtn">Сохранить</button>
   </div>
@@ -40,12 +50,33 @@
     const toolbar = document.getElementById('toolbar');
     const canvas  = document.getElementById('canvas');
     const ctx     = canvas.getContext('2d');
-    const colorPicker = document.getElementById('colorPicker');
-    const sizePicker  = document.getElementById('sizePicker');
-    const clearBtn    = document.getElementById('clearBtn');
-    const saveBtn     = document.getElementById('saveBtn');
+    const colorPicker  = document.getElementById('colorPicker');
+    const opacityPicker= document.getElementById('opacityPicker');
+    const sizePicker   = document.getElementById('sizePicker');
+    const brushShape   = document.getElementById('brushShape');
+    const zoomInBtn    = document.getElementById('zoomInBtn');
+    const zoomOutBtn   = document.getElementById('zoomOutBtn');
+    const clearBtn     = document.getElementById('clearBtn');
+    const saveBtn      = document.getElementById('saveBtn');
+
+    let scale = 1;
 
     let drawing = false;
+
+    function hexToRGBA(hex, alpha) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    function getCanvasCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) / scale,
+        y: (e.clientY - rect.top) / scale
+      };
+    }
 
     function resizeCanvas() {
       canvas.width  = window.innerWidth;
@@ -60,20 +91,33 @@
 
     function pointerDown(e) {
       drawing = true;
-      ctx.strokeStyle = colorPicker.value;
+      ctx.strokeStyle = hexToRGBA(colorPicker.value, opacityPicker.value / 100);
       ctx.lineWidth   = sizePicker.value;
+      if (brushShape.value === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      if (brushShape.value === 'square') {
+        ctx.lineCap = ctx.lineJoin = 'butt';
+      } else {
+        ctx.lineCap = ctx.lineJoin = 'round';
+      }
       ctx.beginPath();
-      ctx.moveTo(e.clientX, e.clientY - toolbar.offsetHeight);
+      const pos = getCanvasCoords(e);
+      ctx.moveTo(pos.x, pos.y);
       canvas.setPointerCapture(e.pointerId);
     }
     function pointerMove(e) {
       if (!drawing) return;
-      ctx.lineTo(e.clientX, e.clientY - toolbar.offsetHeight);
+      const pos = getCanvasCoords(e);
+      ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
     }
     function pointerUp(e) {
       drawing = false;
       ctx.closePath();
+      ctx.globalCompositeOperation = 'source-over';
       canvas.releasePointerCapture(e.pointerId);
     }
 
@@ -86,6 +130,23 @@
     clearBtn.addEventListener('click', () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     });
+
+    function updateZoom() {
+      canvas.style.transformOrigin = '0 0';
+      canvas.style.transform = `scale(${scale})`;
+    }
+
+    zoomInBtn.addEventListener('click', () => {
+      scale *= 1.2;
+      updateZoom();
+    });
+
+    zoomOutBtn.addEventListener('click', () => {
+      scale /= 1.2;
+      updateZoom();
+    });
+
+    updateZoom();
 
     saveBtn.addEventListener('click', () => {
       const link = document.createElement('a');
