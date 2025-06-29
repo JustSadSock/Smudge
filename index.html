@@ -16,6 +16,10 @@
       overflow: hidden;
       background: #fefaf6;
       font-family: sans-serif;
+      touch-action: none;
+      -ms-touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     #toolbar {
@@ -31,7 +35,8 @@
       box-shadow: 0 -2px 4px rgba(0,0,0,0.2);
       border-radius: 12px 12px 0 0;
       z-index: 10;
-      transition: transform 0.3s;
+      opacity: 1;
+      transition: transform 0.3s, opacity 0.3s;
     }
 
     #toolbar.collapsed > :not(#toggleToolbarBtn) {
@@ -40,6 +45,7 @@
     #toolbar.collapsed {
       padding: 4px;
       justify-content: flex-end;
+      opacity: 0.6;
     }
 
     #toggleToolbarBtn {
@@ -73,12 +79,17 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      border-radius: 20px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: opacity 0.3s;
+      transition: opacity 0.3s, box-shadow 0.3s;
     }
 
     #toolbar button:hover {
       opacity: 0.8;
+    }
+
+    #toolbar button.active {
+      box-shadow: 0 0 0 3px #aed9e0 inset;
     }
 
     #quickPalette {
@@ -91,6 +102,12 @@
       border-radius: 4px;
       border: 1px solid #00000030;
       cursor: pointer;
+      outline: 2px solid transparent;
+      outline-offset: 2px;
+    }
+
+    .swatch.selected {
+      outline-color: #aed9e0;
     }
 
     canvas {

@@ -1,5 +1,7 @@
 import { hexToRGBA, distance, angle } from './utils.js';
 
+window.addEventListener('contextmenu', e => e.preventDefault());
+
 const toolbar = document.getElementById('toolbar');
 const layers = [
   document.getElementById('layer0'),
@@ -33,6 +35,8 @@ quickPalette.innerHTML = paletteColors.map(c => `<div class="swatch" data-color=
 quickPalette.addEventListener('click', e => {
   if (e.target.classList.contains('swatch')) {
     colorPicker.value = e.target.dataset.color;
+    quickPalette.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+    e.target.classList.add('selected');
   }
 });
 
@@ -280,6 +284,11 @@ fillBtn.addEventListener('click', () => {
 
 eyedropperBtn.addEventListener('click', () => {
   currentTool = currentTool === 'eyedropper' ? 'brush' : 'eyedropper';
+  if (currentTool === 'eyedropper') {
+    eyedropperBtn.classList.add('active');
+  } else {
+    eyedropperBtn.classList.remove('active');
+  }
 });
 
 function updateTransform() {

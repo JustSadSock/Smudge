@@ -1,6 +1,8 @@
 import { hexToRGBA } from './utils.js';
 import { renderFrameRailHTML } from './renderRail.js';
 
+window.addEventListener('contextmenu', e => e.preventDefault());
+
 const layers = [
   document.getElementById('layer0'),
   document.getElementById('layer1')
