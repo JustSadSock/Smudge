@@ -3,6 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <script>
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock("portrait").catch(() => {});
+    }
+  </script>
   <title>Draw App</title>
   <style>
     body { margin: 0; overflow: hidden; }
@@ -41,6 +46,10 @@
     </select>
     <button id="zoomInBtn"  title="Приблизить">+</button>
     <button id="zoomOutBtn" title="Отдалить">-</button>
+    <button id="undoBtn" title="Отменить">&#8617;</button>
+    <button id="redoBtn" title="Повторить">&#8618;</button>
+    <button id="fillBtn" title="Заливка">Залить</button>
+    <button id="eyedropperBtn" title="Пипетка">Пипетка</button>
     <button id="clearBtn">Очистить</button>
     <button id="saveBtn">Сохранить</button>
   </div>
@@ -56,12 +65,24 @@
     const brushShape   = document.getElementById('brushShape');
     const zoomInBtn    = document.getElementById('zoomInBtn');
     const zoomOutBtn   = document.getElementById('zoomOutBtn');
+    const undoBtn      = document.getElementById('undoBtn');
+    const redoBtn      = document.getElementById('redoBtn');
+    const fillBtn      = document.getElementById('fillBtn');
+    const eyedropperBtn= document.getElementById('eyedropperBtn');
     const clearBtn     = document.getElementById('clearBtn');
     const saveBtn      = document.getElementById('saveBtn');
+
+    let currentTool = 'brush';
+    const history = [];
+    const redoStack = [];
 
     let scale = 1;
 
     let drawing = false;
+    const pointers = new Map();
+    let pinching = false;
+    let startDistance = 0;
+    let startScale = 1;
 
     function hexToRGBA(hex, alpha) {
       const r = parseInt(hex.slice(1, 3), 16);
@@ -78,6 +99,21 @@
       };
     }
 
+    function saveState() {
+      history.push(canvas.toDataURL());
+      if (history.length > 50) history.shift();
+      redoStack.length = 0;
+    }
+
+    function restoreState(data) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = data;
+    }
+
     function resizeCanvas() {
       canvas.width  = window.innerWidth;
       canvas.height = window.innerHeight - toolbar.offsetHeight;
@@ -85,11 +121,16 @@
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
+    saveState();
 
     ctx.lineCap   = 'round';
     ctx.lineJoin  = 'round';
 
-    function pointerDown(e) {
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function startDrawing(e) {
       drawing = true;
       ctx.strokeStyle = hexToRGBA(colorPicker.value, opacityPicker.value / 100);
       ctx.lineWidth   = sizePicker.value;
@@ -108,17 +149,70 @@
       ctx.moveTo(pos.x, pos.y);
       canvas.setPointerCapture(e.pointerId);
     }
+
+    function pointerDown(e) {
+      pointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+      if (pointers.size === 2) {
+        pinching = true;
+        const [p1, p2] = Array.from(pointers.values());
+        startDistance = distance(p1, p2);
+        startScale = scale;
+        if (drawing) {
+          drawing = false;
+          ctx.closePath();
+        }
+        return;
+      }
+      if (pointers.size > 1 || pinching) return;
+
+      if (currentTool === 'eyedropper') {
+        const pos = getCanvasCoords(e);
+        const data = ctx.getImageData(pos.x, pos.y, 1, 1).data;
+        const hex = '#' + [data[0], data[1], data[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+        colorPicker.value = hex;
+        opacityPicker.value = Math.round(data[3] / 255 * 100);
+        currentTool = 'brush';
+        pointers.delete(e.pointerId);
+        return;
+      }
+
+      startDrawing(e);
+    }
+
     function pointerMove(e) {
+      if (pinching) {
+        if (pointers.has(e.pointerId)) {
+          pointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+          if (pointers.size === 2) {
+            const [p1, p2] = Array.from(pointers.values());
+            const newDist = distance(p1, p2);
+            scale = startScale * newDist / startDistance;
+            updateZoom();
+          }
+        }
+        return;
+      }
       if (!drawing) return;
       const pos = getCanvasCoords(e);
       ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
     }
+
     function pointerUp(e) {
+      if (pinching) {
+        pointers.delete(e.pointerId);
+        if (pointers.size < 2) {
+          pinching = false;
+        }
+        return;
+      }
+      if (!drawing) return;
       drawing = false;
       ctx.closePath();
       ctx.globalCompositeOperation = 'source-over';
       canvas.releasePointerCapture(e.pointerId);
+      saveState();
+      pointers.delete(e.pointerId);
     }
 
     canvas.addEventListener('pointerdown', pointerDown);
@@ -129,6 +223,33 @@
 
     clearBtn.addEventListener('click', () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      saveState();
+    });
+
+    undoBtn.addEventListener('click', () => {
+      if (history.length > 0) {
+        redoStack.push(canvas.toDataURL());
+        const data = history.pop();
+        restoreState(data);
+      }
+    });
+
+    redoBtn.addEventListener('click', () => {
+      if (redoStack.length > 0) {
+        history.push(canvas.toDataURL());
+        const data = redoStack.pop();
+        restoreState(data);
+      }
+    });
+
+    fillBtn.addEventListener('click', () => {
+      ctx.fillStyle = hexToRGBA(colorPicker.value, opacityPicker.value / 100);
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      saveState();
+    });
+
+    eyedropperBtn.addEventListener('click', () => {
+      currentTool = currentTool === 'eyedropper' ? 'brush' : 'eyedropper';
     });
 
     function updateZoom() {
