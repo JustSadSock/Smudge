@@ -5,6 +5,10 @@ describe('utils', () => {
     expect(hexToRGBA('#ff0000', 0.5)).toBe('rgba(255,0,0,0.5)');
   });
 
+  test('hexToRGBA supports 3-digit hex', () => {
+    expect(hexToRGBA('#fff', 1)).toBe('rgba(255,255,255,1)');
+  });
+
   test('distance calculates euclidean distance', () => {
     const a = {x: 0, y: 0};
     const b = {x: 3, y: 4};

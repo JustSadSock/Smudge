@@ -1,4 +1,5 @@
 import { hexToRGBA } from './utils.js';
+import { renderFrameRailHTML } from './renderRail.js';
 
 const layers = [
   document.getElementById('layer0'),
@@ -43,7 +44,7 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 function renderFrameRail() {
-  frameRail.innerHTML = frames.map((data,i)=>`<img class='thumb ${i===currentFrame?'active':''}' data-idx='${i}' src='${data||''}'>`).join('');
+  frameRail.innerHTML = renderFrameRailHTML(frames, currentFrame);
 }
 
 function captureCurrent() {
