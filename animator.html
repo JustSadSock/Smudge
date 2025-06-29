@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock("portrait").catch(() => {});
+    }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+  <title>Pocket Animator</title>
+  <style>
+    body {
+      margin: 0;
+      background: #fefaf6;
+      font-family: sans-serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    #canvasContainer {
+      position: relative;
+      height: 60vh;
+      overflow: hidden;
+      touch-action: none;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      touch-action: none;
+    }
+    #frameRail {
+      flex: 1;
+      background: #e8e4df;
+      overflow-x: auto;
+      white-space: nowrap;
+      padding: 4px;
+      box-sizing: border-box;
+      display: flex;
+      gap: 4px;
+    }
+    .thumb {
+      width: 72px;
+      height: 72px;
+      object-fit: cover;
+      border: 2px solid transparent;
+    }
+    .thumb.active {
+      border-color: #000;
+    }
+    #toolbar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 6px;
+      background: rgba(232,228,223,0.9);
+    }
+  </style>
+</head>
+<body>
+  <div id="canvasContainer">
+    <canvas id="layer0"></canvas>
+    <canvas id="layer1"></canvas>
+    <div id="toolbar">
+      <input type="color" id="colorPicker" title="Цвет кисти" value="#000000">
+      <label title="Прозрачность">
+        <input type="range" id="opacityPicker" min="0" max="100" value="100">
+      </label>
+      <label title="Размер кисти">
+        <input type="range" id="sizePicker" min="1" max="50" value="5">
+      </label>
+      <select id="brushShape" title="Тип кисти">
+        <option value="round">Круглая</option>
+        <option value="square">Квадратная</option>
+        <option value="eraser">Ластик</option>
+      </select>
+      <button id="undoBtn" title="Отменить">&#8617;</button>
+      <button id="redoBtn" title="Повторить">&#8618;</button>
+      <button id="clearBtn" title="Очистить">🗑️</button>
+      <button id="addFrameBtn" title="Новый кадр">➕</button>
+      <button id="playBtn" title="Воспроизвести">▶️</button>
+      <button id="exportBtn" title="Экспорт">💾</button>
+      <input type="range" id="onionRange" min="0" max="100" value="30" title="Onion Skin">
+    </div>
+  </div>
+  <div id="frameRail"></div>
+  <script src="https://unpkg.com/gif.js@0.2.0/dist/gif.js"></script>
+  <script type="module" src="src/animator.js"></script>
+</body>
+</html>

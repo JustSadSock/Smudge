@@ -1,0 +1,9 @@
+{
+  "name": "Pocket Animator",
+  "short_name": "Animator",
+  "start_url": "animator.html",
+  "display": "standalone",
+  "background_color": "#fefaf6",
+  "description": "Pocket animation studio",
+  "icons": []
+}
