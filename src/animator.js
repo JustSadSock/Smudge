@@ -1,5 +1,6 @@
 import { hexToRGBA } from './utils.js';
 import { renderFrameRailHTML } from './renderRail.js';
+import { beginStroke, drawStroke, endStroke, saveState as pushState, restoreState as loadState } from './drawingCore.js';
 
 window.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -66,17 +67,13 @@ function captureCurrent() {
 }
 
 function saveState() {
-  history.push(captureCurrent());
-  if (history.length > 50) history.shift();
-  redoStack.length = 0;
+  pushState(history, redoStack, captureCurrent());
 }
 
 function restoreState(data) {
   ctxs.forEach(c => c.clearRect(0,0,c.canvas.width,c.canvas.height));
   if (!data) return;
-  const img = new Image();
-  img.onload = () => ctx.drawImage(img,0,0);
-  img.src = data;
+  loadState(ctx, data);
 }
 
 function saveFrame() {
@@ -114,29 +111,25 @@ frameRail.addEventListener('click', e => {
 function pointerDown(e) {
   drawing = true;
   saveState();
-  ctx.strokeStyle = colorPicker.value;
-  ctx.globalAlpha = opacityPicker.value/100;
-  ctx.lineWidth = sizePicker.value;
-  ctx.lineCap = brushShape.value === 'square' ? 'butt' : 'round';
-  if (brushShape.value === 'eraser') ctx.globalCompositeOperation = 'destination-out';
-  else ctx.globalCompositeOperation = 'source-over';
   const r = canvas.getBoundingClientRect();
-  ctx.beginPath();
-  ctx.moveTo(e.clientX - r.left, e.clientY - r.top);
+  beginStroke(ctx, {
+    color: colorPicker.value,
+    opacity: opacityPicker.value / 100,
+    size: sizePicker.value,
+    shape: brushShape.value
+  }, { x: e.clientX - r.left, y: e.clientY - r.top });
 }
 
 function pointerMove(e) {
   if (!drawing) return;
   const r = canvas.getBoundingClientRect();
-  ctx.lineTo(e.clientX - r.left, e.clientY - r.top);
-  ctx.stroke();
+  drawStroke(ctx, { x: e.clientX - r.left, y: e.clientY - r.top });
 }
 
 function pointerUp() {
   if (!drawing) return;
   drawing = false;
-  ctx.closePath();
-  ctx.globalCompositeOperation = 'source-over';
+  endStroke(ctx);
   saveFrame();
 }
 
