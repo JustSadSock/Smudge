@@ -20,8 +20,12 @@ const undoBtn = document.getElementById('undoBtn');
 const redoBtn = document.getElementById('redoBtn');
 const clearBtn = document.getElementById('clearBtn');
 const addFrameBtn = document.getElementById('addFrameBtn');
+const copyFrameBtn = document.getElementById('copyFrameBtn');
 const playBtn = document.getElementById('playBtn');
+const speedInput = document.getElementById('speedInput');
+const loopCheckbox = document.getElementById('loopCheckbox');
 const exportBtn = document.getElementById('exportBtn');
+const exportVideoBtn = document.getElementById('exportVideoBtn');
 const onionRange = document.getElementById('onionRange');
 const frameRail = document.getElementById('frameRail');
 const container = document.getElementById('canvasContainer');
@@ -33,6 +37,9 @@ container.insertBefore(onionCanvas, layers[0]);
 let frames = [];
 let currentFrame = 0;
 let drawing = false;
+const history = [];
+const redoStack = [];
+let playerInterval = null;
 
 function resizeCanvas() {
   layers.forEach(l => {
@@ -56,6 +63,20 @@ function captureCurrent() {
   const offCtx = off.getContext('2d');
   layers.forEach(l => offCtx.drawImage(l,0,0));
   return off.toDataURL();
+}
+
+function saveState() {
+  history.push(captureCurrent());
+  if (history.length > 50) history.shift();
+  redoStack.length = 0;
+}
+
+function restoreState(data) {
+  ctxs.forEach(c => c.clearRect(0,0,c.canvas.width,c.canvas.height));
+  if (!data) return;
+  const img = new Image();
+  img.onload = () => ctx.drawImage(img,0,0);
+  img.src = data;
 }
 
 function saveFrame() {
@@ -82,7 +103,8 @@ function addFrame(copy=false) {
   loadFrame(currentFrame+1);
 }
 
-addFrameBtn.addEventListener('click', () => addFrame(true));
+addFrameBtn.addEventListener('click', () => addFrame(false));
+copyFrameBtn.addEventListener('click', () => addFrame(true));
 
 frameRail.addEventListener('click', e => {
   const idx = e.target.dataset.idx;
@@ -91,6 +113,7 @@ frameRail.addEventListener('click', e => {
 
 function pointerDown(e) {
   drawing = true;
+  saveState();
   ctx.strokeStyle = colorPicker.value;
   ctx.globalAlpha = opacityPicker.value/100;
   ctx.lineWidth = sizePicker.value;
@@ -130,6 +153,24 @@ clearBtn.addEventListener('click', () => {
   saveFrame();
 });
 
+undoBtn.addEventListener('click', () => {
+  if (history.length) {
+    redoStack.push(captureCurrent());
+    const data = history.pop();
+    restoreState(data);
+    saveFrame();
+  }
+});
+
+redoBtn.addEventListener('click', () => {
+  if (redoStack.length) {
+    history.push(captureCurrent());
+    const data = redoStack.pop();
+    restoreState(data);
+    saveFrame();
+  }
+});
+
 function showOnion() {
   onionCtx.clearRect(0,0,onionCanvas.width,onionCanvas.height);
   const prev = frames[currentFrame-1];
@@ -150,12 +191,18 @@ function showOnion() {
 onionRange.addEventListener('input', showOnion);
 
 function play() {
+  if (frames.length === 0) return;
   let i = 0;
-  const interval = setInterval(() => {
+  const delay = parseInt(speedInput.value, 10) || 200;
+  clearInterval(playerInterval);
+  playerInterval = setInterval(() => {
     loadFrame(i);
     i++;
-    if (i >= frames.length) clearInterval(interval);
-  }, 200);
+    if (i >= frames.length) {
+      if (loopCheckbox.checked) i = 0;
+      else clearInterval(playerInterval);
+    }
+  }, delay);
 }
 playBtn.addEventListener('click', play);
 
@@ -179,4 +226,43 @@ function exportGIF() {
 }
 exportBtn.addEventListener('click', exportGIF);
 
+function exportVideo() {
+  saveFrame();
+  const off = document.createElement('canvas');
+  off.width = layers[0].width;
+  off.height = layers[0].height;
+  const offCtx = off.getContext('2d');
+  const stream = off.captureStream();
+  const recorder = new MediaRecorder(stream, {mimeType:'video/webm'});
+  const chunks = [];
+  recorder.ondataavailable = e => chunks.push(e.data);
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, {type:'video/webm'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'animation.webm';
+    a.click();
+  };
+  let i = 0;
+  const delay = parseInt(speedInput.value,10) || 200;
+  function draw() {
+    if (i >= frames.length) {
+      recorder.stop();
+      return;
+    }
+    offCtx.clearRect(0,0,off.width,off.height);
+    const img = new Image();
+    img.onload = () => {
+      offCtx.drawImage(img,0,0);
+      setTimeout(() => { i++; draw(); }, delay);
+    };
+    img.src = frames[i];
+  }
+  recorder.start();
+  draw();
+}
+exportVideoBtn.addEventListener('click', exportVideo);
+
 addFrame(false);
+saveState();
