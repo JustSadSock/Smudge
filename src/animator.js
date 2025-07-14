@@ -138,6 +138,10 @@ function showOnion() {
     img.onload = () => {
       onionCtx.globalAlpha = onionRange.value/100;
       onionCtx.drawImage(img,0,0);
+      onionCtx.fillStyle = 'rgba(128,0,128,0.5)';
+      onionCtx.globalCompositeOperation = 'source-atop';
+      onionCtx.fillRect(0,0,onionCanvas.width,onionCanvas.height);
+      onionCtx.globalCompositeOperation = 'source-over';
     };
     img.src = prev;
   }

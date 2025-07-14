@@ -31,6 +31,7 @@ const quickPalette  = document.getElementById('quickPalette');
 const layerSelect   = document.getElementById('layerSelect');
 const showLayer0    = document.getElementById('showLayer0');
 const showLayer1    = document.getElementById('showLayer1');
+const moreBtn       = document.getElementById('moreBtn');
 
 const paletteColors = ['#aed9e0','#f6c6c6','#d5e3dc','#e3daf5','#fefaf6','#e8e4df','#f3f3f3','#ffffff'];
 quickPalette.innerHTML = paletteColors.map(c => `<div class="swatch" data-color="${c}" style="background:${c}"></div>`).join('');
@@ -357,15 +358,18 @@ function updateTransform() {
   });
 }
 
-zoomInBtn.addEventListener('click', () => {
-  scale *= 1.2;
+function zoomAt(factor) {
+  const rect = canvas.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  offsetX = cx - ((cx - offsetX) * factor);
+  offsetY = cy - ((cy - offsetY) * factor);
+  scale *= factor;
   updateTransform();
-});
+}
 
-zoomOutBtn.addEventListener('click', () => {
-  scale /= 1.2;
-  updateTransform();
-});
+zoomInBtn.addEventListener('click', () => zoomAt(1.2));
+zoomOutBtn.addEventListener('click', () => zoomAt(1 / 1.2));
 
 updateTransform();
 
@@ -444,6 +448,10 @@ const toggleToolbarBtn = document.getElementById('toggleToolbarBtn');
 toggleToolbarBtn.addEventListener('click', () => {
   toolbar.classList.toggle('collapsed');
   toggleToolbarBtn.textContent = toolbar.classList.contains('collapsed') ? '▲' : '▼';
+});
+
+moreBtn.addEventListener('click', () => {
+  toolbar.classList.toggle('show-advanced');
 });
 
 function resetToolbarTimer() {
