@@ -69,8 +69,8 @@ layerSelect.addEventListener('change', () => {
 updateVisibility();
 
 let currentTool = 'brush';
-const history = [];
-const redoStack = [];
+const history = [[], []];
+const redoStack = [[], []];
 
 let scale = 1;
 let rotation = 0;
@@ -123,9 +123,10 @@ function checkStorage() {
 }
 
 function saveState() {
-  history.push(canvas.toDataURL());
-  if (history.length > 50) history.shift();
-  redoStack.length = 0;
+  const h = history[activeLayer];
+  h.push(canvas.toDataURL());
+  if (h.length > 50) h.shift();
+  redoStack[activeLayer].length = 0;
   captureFrame();
   autosave();
 }
@@ -321,17 +322,21 @@ clearBtn.addEventListener('click', () => {
 });
 
 undoBtn.addEventListener('click', () => {
-  if (history.length > 0) {
-    redoStack.push(canvas.toDataURL());
-    const data = history.pop();
+  const h = history[activeLayer];
+  const r = redoStack[activeLayer];
+  if (h.length > 0) {
+    r.push(canvas.toDataURL());
+    const data = h.pop();
     restoreState(data);
   }
 });
 
 redoBtn.addEventListener('click', () => {
-  if (redoStack.length > 0) {
-    history.push(canvas.toDataURL());
-    const data = redoStack.pop();
+  const h = history[activeLayer];
+  const r = redoStack[activeLayer];
+  if (r.length > 0) {
+    h.push(canvas.toDataURL());
+    const data = r.pop();
     restoreState(data);
   }
 });
@@ -471,3 +476,5 @@ window.addEventListener('pointerdown', () => {
 });
 window.addEventListener('pointermove', resetToolbarTimer);
 resetToolbarTimer();
+
+export { history, redoStack, saveState };
