@@ -1,4 +1,5 @@
 import { hexToRGBA, distance, angle } from './utils.js';
+import { beginStroke, drawStroke, endStroke, saveState as pushState, restoreState as loadState } from './drawingCore.js';
 
 window.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -124,20 +125,14 @@ function checkStorage() {
 
 function saveState() {
   const h = history[activeLayer];
-  h.push(canvas.toDataURL());
-  if (h.length > 50) h.shift();
-  redoStack[activeLayer].length = 0;
+  const r = redoStack[activeLayer];
+  pushState(h, r, canvas.toDataURL());
   captureFrame();
   autosave();
 }
 
 function restoreState(data) {
-  const img = new Image();
-  img.onload = () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
-  };
-  img.src = data;
+  loadState(ctx, data, canvas);
 }
 
 function resizeCanvas() {
@@ -170,22 +165,13 @@ let lastTime = 0;
 
 function startDrawing(e) {
   drawing = true;
-  ctx.strokeStyle = colorPicker.value;
-  ctx.globalAlpha = opacityPicker.value / 100;
-  ctx.lineWidth   = sizePicker.value;
-  if (brushShape.value === 'eraser') {
-    ctx.globalCompositeOperation = 'destination-out';
-  } else {
-    ctx.globalCompositeOperation = 'source-over';
-  }
-  if (brushShape.value === 'square') {
-    ctx.lineCap = ctx.lineJoin = 'butt';
-  } else {
-    ctx.lineCap = ctx.lineJoin = 'round';
-  }
-  ctx.beginPath();
   const pos = getCanvasCoords(e);
-  ctx.moveTo(pos.x, pos.y);
+  beginStroke(ctx, {
+    color: colorPicker.value,
+    opacity: opacityPicker.value / 100,
+    size: sizePicker.value,
+    shape: brushShape.value
+  }, pos);
   lastPoint = pos;
   lastTime = performance.now();
   canvas.setPointerCapture(e.pointerId);
@@ -262,8 +248,7 @@ function pointerMove(e) {
   const dist = Math.hypot(pos.x - lastPoint.x, pos.y - lastPoint.y);
   const speed = dist / dt;
   canvas.style.filter = speed > 0.8 ? 'blur(1px)' : 'none';
-  ctx.lineTo(pos.x + (Math.random()-0.5), pos.y + (Math.random()-0.5));
-  ctx.stroke();
+  drawStroke(ctx, { x: pos.x + (Math.random()-0.5), y: pos.y + (Math.random()-0.5) });
   lastPoint = pos;
   lastTime = now;
 }
@@ -300,8 +285,7 @@ function pointerUp(e) {
   }
   if (!drawing) return;
   drawing = false;
-  ctx.closePath();
-  ctx.globalCompositeOperation = 'source-over';
+  endStroke(ctx);
   canvas.releasePointerCapture(e.pointerId);
   saveState();
   canvas.style.filter = 'none';
