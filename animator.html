@@ -64,6 +64,17 @@
       padding: 6px;
       background: rgba(232,228,223,0.9);
     }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
   </style>
 </head>
 <body>
@@ -83,16 +94,16 @@
         <option value="square">Квадратная</option>
         <option value="eraser">Ластик</option>
       </select>
-      <button id="undoBtn" title="Отменить">&#8617;</button>
-      <button id="redoBtn" title="Повторить">&#8618;</button>
-      <button id="clearBtn" title="Очистить">🗑️</button>
-      <button id="addFrameBtn" title="Новый кадр">➕</button>
-      <button id="copyFrameBtn" title="Копировать кадр">📄</button>
-      <button id="playBtn" title="Воспроизвести">▶️</button>
+      <button id="undoBtn" title="Отменить" aria-label="Отменить">&#8617;<span class="sr-only">Отменить</span></button>
+      <button id="redoBtn" title="Повторить" aria-label="Повторить">&#8618;<span class="sr-only">Повторить</span></button>
+      <button id="clearBtn" title="Очистить" aria-label="Очистить">🗑️<span class="sr-only">Очистить</span></button>
+      <button id="addFrameBtn" title="Новый кадр" aria-label="Новый кадр">➕<span class="sr-only">Новый кадр</span></button>
+      <button id="copyFrameBtn" title="Копировать кадр" aria-label="Копировать кадр">📄<span class="sr-only">Копировать кадр</span></button>
+      <button id="playBtn" title="Воспроизвести" aria-label="Воспроизвести">▶️<span class="sr-only">Воспроизвести</span></button>
       <label title="Длительность кадра, мс"><input type="number" id="speedInput" value="200" min="50" max="1000" step="50"></label>
       <label title="Повторять"><input type="checkbox" id="loopCheckbox"></label>
-      <button id="exportBtn" title="Экспорт">💾</button>
-      <button id="exportVideoBtn" title="Экспорт видео">📹</button>
+      <button id="exportBtn" title="Экспорт" aria-label="Экспорт">💾<span class="sr-only">Экспорт</span></button>
+      <button id="exportVideoBtn" title="Экспорт видео" aria-label="Экспорт видео">📹<span class="sr-only">Экспорт видео</span></button>
       <input type="range" id="onionRange" min="0" max="100" value="30" title="Onion Skin">
     </div>
   </div>
