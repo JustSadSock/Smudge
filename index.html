@@ -64,7 +64,8 @@
 
     #toolbar input,
     #toolbar button,
-    #toolbar select {
+    #toolbar select,
+    #toolbar a {
       font-size: 16px;
       padding: 6px 10px;
       background: #d5e3dc;
@@ -72,7 +73,8 @@
       border-radius: 10px;
     }
 
-    #toolbar button {
+    #toolbar button,
+    #toolbar a {
       background: #e3daf5;
       width: 40px;
       height: 40px;
@@ -82,13 +84,17 @@
       border-radius: 20px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       transition: opacity 0.3s, box-shadow 0.3s;
+      text-decoration: none;
+      color: inherit;
     }
 
-    #toolbar button:hover {
+    #toolbar button:hover,
+    #toolbar a:hover {
       opacity: 0.8;
     }
 
-    #toolbar button.active {
+    #toolbar button.active,
+    #toolbar a.active {
       box-shadow: 0 0 0 3px #aed9e0 inset;
     }
 
@@ -109,6 +115,9 @@
     .swatch.selected {
       outline-color: #aed9e0;
     }
+
+    #advancedControls { display: none; gap: 8px; }
+    #toolbar.show-advanced #advancedControls { display: flex; }
 
     canvas {
       position: absolute;
@@ -153,6 +162,7 @@
 <body>
   <div id="toolbar">
     <button id="toggleToolbarBtn" title="Свернуть панель">▼</button>
+    <button id="moreBtn" title="Дополнительно">☰</button>
     <input type="color" id="colorPicker" title="Цвет кисти" value="#000000">
     <label title="Прозрачность">
       <input type="range" id="opacityPicker" min="0" max="100" value="100">
@@ -165,23 +175,26 @@
       <option value="square">Квадратная</option>
       <option value="eraser">Ластик</option>
     </select>
-    <button id="zoomInBtn"  title="Приблизить">+</button>
-    <button id="zoomOutBtn" title="Отдалить">-</button>
     <button id="undoBtn" title="Отменить">&#8617;</button>
     <button id="redoBtn" title="Повторить">&#8618;</button>
-    <button id="fillBtn" title="Заливка">🪣</button>
-    <button id="eyedropperBtn" title="Пипетка">🎨</button>
     <button id="clearBtn" title="Очистить">🗑️</button>
     <button id="saveBtn" title="Сохранить">💾</button>
-    <button id="ambientBtn" title="Звук">🎵</button>
-    <button id="gridBtn" title="Сетка">#</button>
-    <div id="quickPalette" title="Быстрые цвета"></div>
-    <select id="layerSelect" title="Слой">
-      <option value="1">Объекты</option>
-      <option value="0">Фон</option>
-    </select>
-    <label><input type="checkbox" id="showLayer0" checked>Фон</label>
-    <label><input type="checkbox" id="showLayer1" checked>Объекты</label>
+    <a id="animatorBtn" href="animator.html" title="Анимация">🎞️</a>
+    <div id="advancedControls">
+      <button id="zoomInBtn"  title="Приблизить">+</button>
+      <button id="zoomOutBtn" title="Отдалить">-</button>
+      <button id="fillBtn" title="Заливка">🪣</button>
+      <button id="eyedropperBtn" title="Пипетка">🎨</button>
+      <button id="ambientBtn" title="Звук">🎵</button>
+      <button id="gridBtn" title="Сетка">#</button>
+      <div id="quickPalette" title="Быстрые цвета"></div>
+      <select id="layerSelect" title="Слой">
+        <option value="1">Объекты</option>
+        <option value="0">Фон</option>
+      </select>
+      <label><input type="checkbox" id="showLayer0" checked>Фон</label>
+      <label><input type="checkbox" id="showLayer1" checked>Объекты</label>
+    </div>
   </div>
   <canvas id="layer0"></canvas>
   <canvas id="layer1"></canvas>
