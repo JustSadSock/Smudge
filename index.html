@@ -157,12 +157,23 @@
       background-size: 20px 20px;
       display: none;
     }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
   </style>
 </head>
 <body>
   <div id="toolbar">
-    <button id="toggleToolbarBtn" title="Свернуть панель">▼</button>
-    <button id="moreBtn" title="Дополнительно">☰</button>
+    <button id="toggleToolbarBtn" title="Свернуть панель" aria-label="Свернуть панель">▼</button>
+    <button id="moreBtn" title="Дополнительно" aria-label="Дополнительно">☰<span class="sr-only">Дополнительно</span></button>
     <input type="color" id="colorPicker" title="Цвет кисти" value="#000000">
     <label title="Прозрачность">
       <input type="range" id="opacityPicker" min="0" max="100" value="100">
@@ -175,18 +186,18 @@
       <option value="square">Квадратная</option>
       <option value="eraser">Ластик</option>
     </select>
-    <button id="undoBtn" title="Отменить">&#8617;</button>
-    <button id="redoBtn" title="Повторить">&#8618;</button>
-    <button id="clearBtn" title="Очистить">🗑️</button>
-    <button id="saveBtn" title="Сохранить">💾</button>
-    <a id="animatorBtn" href="animator.html" title="Анимация">🎞️</a>
+    <button id="undoBtn" title="Отменить" aria-label="Отменить">&#8617;<span class="sr-only">Отменить</span></button>
+    <button id="redoBtn" title="Повторить" aria-label="Повторить">&#8618;<span class="sr-only">Повторить</span></button>
+    <button id="clearBtn" title="Очистить" aria-label="Очистить">🗑️<span class="sr-only">Очистить</span></button>
+    <button id="saveBtn" title="Сохранить" aria-label="Сохранить">💾<span class="sr-only">Сохранить</span></button>
+    <a id="animatorBtn" href="animator.html" title="Анимация" aria-label="Анимация">🎞️<span class="sr-only">Анимация</span></a>
     <div id="advancedControls">
-      <button id="zoomInBtn"  title="Приблизить">+</button>
-      <button id="zoomOutBtn" title="Отдалить">-</button>
-      <button id="fillBtn" title="Заливка">🪣</button>
-      <button id="eyedropperBtn" title="Пипетка">🎨</button>
-      <button id="ambientBtn" title="Звук">🎵</button>
-      <button id="gridBtn" title="Сетка">#</button>
+      <button id="zoomInBtn"  title="Приблизить" aria-label="Приблизить">+<span class="sr-only">Приблизить</span></button>
+      <button id="zoomOutBtn" title="Отдалить" aria-label="Отдалить">-<span class="sr-only">Отдалить</span></button>
+      <button id="fillBtn" title="Заливка" aria-label="Заливка">🪣<span class="sr-only">Заливка</span></button>
+      <button id="eyedropperBtn" title="Пипетка" aria-label="Пипетка">🎨<span class="sr-only">Пипетка</span></button>
+      <button id="ambientBtn" title="Звук" aria-label="Звук">🎵<span class="sr-only">Звук</span></button>
+      <button id="gridBtn" title="Сетка" aria-label="Сетка">#<span class="sr-only">Сетка</span></button>
       <div id="quickPalette" title="Быстрые цвета"></div>
       <select id="layerSelect" title="Слой">
         <option value="1">Объекты</option>
