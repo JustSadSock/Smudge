@@ -183,17 +183,38 @@ function showOnion() {
 
 onionRange.addEventListener('input', showOnion);
 
+function stopPlayback() {
+  if (playerInterval) {
+    clearInterval(playerInterval);
+    playerInterval = null;
+    onionCanvas.style.display = '';
+    showOnion();
+  }
+}
+
 function play() {
   if (frames.length === 0) return;
+  stopPlayback();
+  onionCanvas.style.display = 'none';
+  const images = frames.map(src => {
+    if (!src) return null;
+    const img = new Image();
+    img.src = src;
+    return img;
+  });
   let i = 0;
   const delay = parseInt(speedInput.value, 10) || 200;
   clearInterval(playerInterval);
   playerInterval = setInterval(() => {
-    loadFrame(i);
+    ctxs.forEach(c => c.clearRect(0,0,c.canvas.width,c.canvas.height));
+    const img = images[i];
+    if (img) ctx.drawImage(img,0,0);
+    currentFrame = i;
+    renderFrameRail();
     i++;
-    if (i >= frames.length) {
+    if (i >= images.length) {
       if (loopCheckbox.checked) i = 0;
-      else clearInterval(playerInterval);
+      else stopPlayback();
     }
   }, delay);
 }
