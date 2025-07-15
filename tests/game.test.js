@@ -19,6 +19,8 @@ const markup = `
 <button id="ambientBtn"></button>
 <button id="gridBtn"></button>
 <div id="quickPalette"></div>
+<input id="sessionCode" />
+<button id="connectBtn"></button>
 <select id="layerSelect"><option value="1">1</option><option value="0">0</option></select>
 <label><input type="checkbox" id="showLayer0" checked></label>
 <label><input type="checkbox" id="showLayer1" checked></label>
