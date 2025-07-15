@@ -33,6 +33,8 @@ const layerSelect   = document.getElementById('layerSelect');
 const showLayer0    = document.getElementById('showLayer0');
 const showLayer1    = document.getElementById('showLayer1');
 const moreBtn       = document.getElementById('moreBtn');
+const sessionCode   = document.getElementById('sessionCode');
+const connectBtn    = document.getElementById('connectBtn');
 
 const paletteColors = ['#aed9e0','#f6c6c6','#d5e3dc','#e3daf5','#fefaf6','#e8e4df','#f3f3f3','#ffffff'];
 quickPalette.innerHTML = paletteColors.map(c => `<div class="swatch" data-color="${c}" style="background:${c}"></div>`).join('');
@@ -72,6 +74,7 @@ updateVisibility();
 let currentTool = 'brush';
 const history = [[], []];
 const redoStack = [[], []];
+let socket = null;
 
 let scale = 1;
 let rotation = 0;
@@ -172,6 +175,20 @@ function startDrawing(e) {
     size: sizePicker.value,
     shape: brushShape.value
   }, pos);
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: 'draw',
+      layer: activeLayer,
+      action: 'begin',
+      style: {
+        color: colorPicker.value,
+        opacity: opacityPicker.value / 100,
+        size: sizePicker.value,
+        shape: brushShape.value
+      },
+      pos
+    }));
+  }
   lastPoint = pos;
   lastTime = performance.now();
   canvas.setPointerCapture(e.pointerId);
@@ -248,7 +265,16 @@ function pointerMove(e) {
   const dist = Math.hypot(pos.x - lastPoint.x, pos.y - lastPoint.y);
   const speed = dist / dt;
   canvas.style.filter = speed > 0.8 ? 'blur(1px)' : 'none';
-  drawStroke(ctx, { x: pos.x + (Math.random()-0.5), y: pos.y + (Math.random()-0.5) });
+  const drawPos = { x: pos.x + (Math.random()-0.5), y: pos.y + (Math.random()-0.5) };
+  drawStroke(ctx, drawPos);
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: 'draw',
+      layer: activeLayer,
+      action: 'move',
+      pos: drawPos
+    }));
+  }
   lastPoint = pos;
   lastTime = now;
 }
@@ -286,6 +312,13 @@ function pointerUp(e) {
   if (!drawing) return;
   drawing = false;
   endStroke(ctx);
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: 'draw',
+      layer: activeLayer,
+      action: 'end'
+    }));
+  }
   canvas.releasePointerCapture(e.pointerId);
   saveState();
   canvas.style.filter = 'none';
@@ -441,6 +474,37 @@ toggleToolbarBtn.addEventListener('click', () => {
 
 moreBtn.addEventListener('click', () => {
   toolbar.classList.toggle('show-advanced');
+});
+
+connectBtn.addEventListener('click', () => {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.close();
+    return;
+  }
+  const code = sessionCode.value.trim();
+  if (!code) return;
+  socket = new WebSocket(`ws://${location.hostname}:1234`);
+  socket.addEventListener('open', () => {
+    socket.send(JSON.stringify({ type:'join', code }));
+    connectBtn.textContent = '❌';
+  });
+  socket.addEventListener('message', e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'draw') {
+      const dest = ctxs[msg.layer];
+      if (!dest) return;
+      if (msg.action === 'begin') {
+        beginStroke(dest, msg.style, msg.pos);
+      } else if (msg.action === 'move') {
+        drawStroke(dest, msg.pos);
+      } else if (msg.action === 'end') {
+        endStroke(dest);
+      }
+    }
+  });
+  socket.addEventListener('close', () => {
+    connectBtn.textContent = '🔗';
+  });
 });
 
 function resetToolbarTimer() {

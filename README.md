@@ -12,6 +12,7 @@ Smudge is a minimalistic browser-based drawing and animation app. It follows the
 - Automatic **timelapse** GIF of your work.
 - Ambient noise toggle for atmosphere.
 - **Animator** mode for frame-by-frame animation with onion skinning, playback, GIF or video export.
+- **Local network** collaboration by entering a shared code.
 
 ## Installation
 1. Install dependencies:
@@ -23,3 +24,8 @@ npm install
 npm test
 ```
 3. Open `index.html` to draw or `animator.html` for animation in your browser. A simple HTTP server or direct file open both work.
+4. To share a session over a local network, run:
+```bash
+npm start
+```
+Enter the same code on each device and press the link button.
