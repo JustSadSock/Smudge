@@ -27,6 +27,9 @@ const speedInput = document.getElementById('speedInput');
 const loopCheckbox = document.getElementById('loopCheckbox');
 const exportBtn = document.getElementById('exportBtn');
 const exportVideoBtn = document.getElementById('exportVideoBtn');
+const exportJsonBtn = document.getElementById('exportJsonBtn');
+const importJsonBtn = document.getElementById('importJsonBtn');
+const importFile    = document.getElementById('importFile');
 const onionRange = document.getElementById('onionRange');
 const frameRail = document.getElementById('frameRail');
 const container = document.getElementById('canvasContainer');
@@ -277,6 +280,38 @@ function exportVideo() {
   draw();
 }
 exportVideoBtn.addEventListener('click', exportVideo);
+
+function exportProject() {
+  saveFrame();
+  const data = {
+    frames
+  };
+  const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'animation.smudge';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function loadProject(obj) {
+  if (!obj || !Array.isArray(obj.frames)) return;
+  frames = obj.frames;
+  currentFrame = 0;
+  renderFrameRail();
+  loadFrame(0);
+}
+
+exportJsonBtn?.addEventListener('click', exportProject);
+importJsonBtn?.addEventListener('click', () => importFile?.click());
+importFile?.addEventListener('change', () => {
+  const file = importFile.files[0];
+  if (file) {
+    file.text().then(t => { try { loadProject(JSON.parse(t)); } catch {} });
+  }
+  importFile.value = '';
+});
 
 addFrame(false);
 saveState();

@@ -25,6 +25,9 @@ const fillBtn       = document.getElementById('fillBtn');
 const eyedropperBtn = document.getElementById('eyedropperBtn');
 const clearBtn      = document.getElementById('clearBtn');
 const saveBtn       = document.getElementById('saveBtn');
+const exportJsonBtn = document.getElementById('exportJsonBtn');
+const importJsonBtn = document.getElementById('importJsonBtn');
+const importFile    = document.getElementById('importFile');
 const ambientBtn    = document.getElementById('ambientBtn');
 const gridBtn       = document.getElementById('gridBtn');
 const gridOverlay   = document.getElementById('gridOverlay');
@@ -464,6 +467,44 @@ ambientBtn.addEventListener('click', toggleAmbient);
 
 gridBtn.addEventListener('click', () => {
   gridOverlay.style.display = gridOverlay.style.display === 'none' ? 'block' : 'none';
+});
+
+function exportProject() {
+  const data = {
+    layers: layers.map(l => l.toDataURL())
+  };
+  const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'drawing.smudge';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function loadProject(obj) {
+  if (!obj || !Array.isArray(obj.layers)) return;
+  obj.layers.forEach((data, i) => {
+    ctxs[i].clearRect(0,0,layers[i].width,layers[i].height);
+    if (data) {
+      const img = new Image();
+      img.onload = () => ctxs[i].drawImage(img,0,0);
+      img.src = data;
+    }
+  });
+  saveState();
+}
+
+exportJsonBtn?.addEventListener('click', exportProject);
+importJsonBtn?.addEventListener('click', () => importFile?.click());
+importFile?.addEventListener('change', () => {
+  const file = importFile.files[0];
+  if (file) {
+    file.text().then(t => {
+      try { loadProject(JSON.parse(t)); } catch {}
+    });
+  }
+  importFile.value = '';
 });
 
 const toggleToolbarBtn = document.getElementById('toggleToolbarBtn');

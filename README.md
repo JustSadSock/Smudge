@@ -11,6 +11,7 @@ Smudge is a minimalistic browser-based drawing and animation app. It follows the
 - Save drawings with a Polaroid-style effect.
 - Automatic **timelapse** GIF of your work.
 - Ambient noise toggle for atmosphere.
+- Project **import/export** to continue editing later.
 - **Animator** mode for frame-by-frame animation with onion skinning, playback, GIF or video export.
 - **Local network** collaboration by entering a shared code.
 
